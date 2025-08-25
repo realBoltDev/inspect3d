@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sketchfab 3D Model Viewer</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+        }
+        
+        #container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+        
+        #canvas-container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+        
+        #controls {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 100;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 20px;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+            color: white;
+            min-width: 300px;
+        }
+        
+        #controls h3 {
+            margin-top: 0;
+            color: #4fc3f7;
+            font-size: 18px;
+        }
+        
+        input[type="url"] {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: none;
+            border-radius: 5px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            font-size: 14px;
+        }
+        
+        input[type="url"]::placeholder {
+            color: rgba(255, 255, 255, 0.6);
+        }
+        
+        button {
+            background: linear-gradient(45deg, #4fc3f7, #29b6f6);
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            color: white;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(79, 195, 247, 0.4);
+        }
+        
+        button:disabled {
+            background: #666;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .slider-container {
+            margin: 15px 0;
+        }
+        
+        .slider-container label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 14px;
+            color: #4fc3f7;
+        }
+        
+        input[type="range"] {
+            width: 100%;
+            -webkit-appearance: none;
+            height: 5px;
+            border-radius: 5px;
+            background: rgba(255, 255, 255, 0.2);
+            outline: none;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #4fc3f7;
+            cursor: pointer;
+        }
+        
+        #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 18px;
+            display: none;
+            text-align: center;
+        }
+        
+        .spinner {
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top: 3px solid #4fc3f7;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        #info {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            color: white;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            backdrop-filter: blur(5px);
+        }
+        
+        .sample-models {
+            margin-top: 15px;
+        }
+        
+        .sample-models h4 {
+            color: #4fc3f7;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+        
+        .sample-model {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 8px;
+            margin: 5px 0;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+            font-size: 12px;
+        }
+        
+        .sample-model:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <div id="canvas-container"></div>
+        
+        <div id="controls">
+            <h3>🎮 3D Model Viewer</h3>
+            <input type="url" id="modelUrl" placeholder="Enter Sketchfab download URL (.glb/.gltf)">
+            <button id="loadModel">Load Model</button>
+            <button id="resetView">Reset View</button>
+            
+            <div class="slider-container">
+                <label for="rotationSpeed">Auto Rotation Speed:</label>
+                <input type="range" id="rotationSpeed" min="0" max="0.02" step="0.001" value="0.005">
+            </div>
+            
+            <div class="slider-container">
+                <label for="lightIntensity">Light Intensity:</label>
+                <input type="range" id="lightIntensity" min="0" max="3" step="0.1" value="1">
+            </div>
+            
+            <div class="sample-models">
+                <h4>Sample Models (you need direct .glb/.gltf URLs):</h4>
+                <div class="sample-model" data-url="https://threejs.org/examples/models/gltf/DamagedHelmet/glTF/DamagedHelmet.gltf">
+                    Damaged Helmet (Three.js sample)
+                </div>
+                <div class="sample-model" data-url="https://threejs.org/examples/models/gltf/Flamingo.glb">
+                    Flamingo (Three.js sample)
+                </div>
+            </div>
+        </div>
+        
+        <div id="loading">
+            <div class="spinner"></div>
+            <div>Loading 3D Model...</div>
+        </div>
+        
+        <div id="info">
+            <strong>Controls:</strong><br>
+            • Left click + drag: Rotate<br>
+            • Right click + drag: Pan<br>
+            • Mouse wheel: Zoom<br>
+            • Double click: Reset view
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // Global variables
+        let scene, camera, renderer, controls, model, mixer, clock;
+        let directionalLight, ambientLight;
+        let autoRotate = true;
+        let rotationSpeed = 0.005;
+        
+        // Initialize the 3D scene
+        function init() {
+            const container = document.getElementById('canvas-container');
+            
+            // Scene setup
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x202020);
+            
+            // Camera setup
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 0, 5);
+            
+            // Renderer setup
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            renderer.outputEncoding = THREE.sRGBEncoding;
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            renderer.toneMappingExposure = 1;
+            container.appendChild(renderer.domElement);
+            
+            // Lighting setup
+            ambientLight = new THREE.AmbientLight(0x404040, 0.4);
+            scene.add(ambientLight);
+            
+            directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+            directionalLight.position.set(5, 5, 5);
+            directionalLight.castShadow = true;
+            directionalLight.shadow.mapSize.width = 2048;
+            directionalLight.shadow.mapSize.height = 2048;
+            scene.add(directionalLight);
+            
+            // Additional lights for better illumination
+            const light2 = new THREE.DirectionalLight(0xffffff, 0.5);
+            light2.position.set(-5, 5, -5);
+            scene.add(light2);
+            
+            const light3 = new THREE.DirectionalLight(0xffffff, 0.3);
+            light3.position.set(0, -5, 5);
+            scene.add(light3);
+            
+            // Clock for animations
+            clock = new THREE.Clock();
+            
+            // Simple orbit controls implementation
+            setupControls();
+            
+            // Event listeners
+            setupEventListeners();
+            
+            // Start render loop
+            animate();
+        }
+        
+        // Simple orbit controls
+        function setupControls() {
+            let isMouseDown = false;
+            let mouseX = 0;
+            let mouseY = 0;
+            let rotationX = 0;
+            let rotationY = 0;
+            let panX = 0;
+            let panY = 0;
+            let zoom = 5;
+            
+            renderer.domElement.addEventListener('mousedown', (e) => {
+                isMouseDown = true;
+                mouseX = e.clientX;
+                mouseY = e.clientY;
+            });
+            
+            renderer.domElement.addEventListener('mousemove', (e) => {
+                if (!isMouseDown) return;
+                
+                const deltaX = e.clientX - mouseX;
+                const deltaY = e.clientY - mouseY;
+                
+                if (e.button === 0) { // Left click - rotate
+                    rotationY += deltaX * 0.01;
+                    rotationX += deltaY * 0.01;
+                    rotationX = Math.max(-Math.PI/2, Math.min(Math.PI/2, rotationX));
+                } else if (e.button === 2) { // Right click - pan
+                    panX += deltaX * 0.01;
+                    panY -= deltaY * 0.01;
+                }
+                
+                updateCameraPosition();
+                mouseX = e.clientX;
+                mouseY = e.clientY;
+            });
+            
+            renderer.domElement.addEventListener('mouseup', () => {
+                isMouseDown = false;
+            });
+            
+            renderer.domElement.addEventListener('wheel', (e) => {
+                zoom += e.deltaY * 0.01;
+                zoom = Math.max(1, Math.min(50, zoom));
+                updateCameraPosition();
+                e.preventDefault();
+            });
+            
+            renderer.domElement.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+            });
+            
+            renderer.domElement.addEventListener('dblclick', () => {
+                rotationX = 0;
+                rotationY = 0;
+                panX = 0;
+                panY = 0;
+                zoom = 5;
+                updateCameraPosition();
+            });
+            
+            function updateCameraPosition() {
+                const x = zoom * Math.sin(rotationY) * Math.cos(rotationX);
+                const y = zoom * Math.sin(rotationX);
+                const z = zoom * Math.cos(rotationY) * Math.cos(rotationX);
+                
+                camera.position.set(x + panX, y + panY, z);
+                camera.lookAt(panX, panY, 0);
+            }
+        }
+        
+        // Load GLTF model
+        function loadModel(url) {
+            const loading = document.getElementById('loading');
+            loading.style.display = 'block';
+            
+            // Remove existing model
+            if (model) {
+                scene.remove(model);
+                model = null;
+            }
+            
+            // GLTF Loader
+            const loader = new THREE.GLTFLoader();
+            
+            loader.load(
+                url,
+                (gltf) => {
+                    model = gltf.scene;
+                    
+                    // Calculate bounding box and center the model
+                    const box = new THREE.Box3().setFromObject(model);
+                    const center = box.getCenter(new THREE.Vector3());
+                    const size = box.getSize(new THREE.Vector3());
+                    
+                    // Center the model
+                    model.position.sub(center);
+                    
+                    // Scale the model to fit in view
+                    const maxSize = Math.max(size.x, size.y, size.z);
+                    const scale = 2 / maxSize;
+                    model.scale.setScalar(scale);
+                    
+                    // Enable shadows
+                    model.traverse((child) => {
+                        if (child.isMesh) {
+                            child.castShadow = true;
+                            child.receiveShadow = true;
+                        }
+                    });
+                    
+                    scene.add(model);
+                    
+                    // Setup animations if available
+                    if (gltf.animations && gltf.animations.length > 0) {
+                        mixer = new THREE.AnimationMixer(model);
+                        gltf.animations.forEach((clip) => {
+                            mixer.clipAction(clip).play();
+                        });
+                    }
+                    
+                    loading.style.display = 'none';
+                },
+                (progress) => {
+                    // Loading progress
+                    console.log('Loading progress:', (progress.loaded / progress.total * 100) + '%');
+                },
+                (error) => {
+                    console.error('Error loading model:', error);
+                    loading.style.display = 'none';
+                    alert('Error loading model. Please check the URL and try again.');
+                }
+            );
+        }
+        
+        // Event listeners
+        function setupEventListeners() {
+            const modelUrl = document.getElementById('modelUrl');
+            const loadButton = document.getElementById('loadModel');
+            const resetButton = document.getElementById('resetView');
+            const rotationSlider = document.getElementById('rotationSpeed');
+            const lightSlider = document.getElementById('lightIntensity');
+            const sampleModels = document.querySelectorAll('.sample-model');
+            
+            loadButton.addEventListener('click', () => {
+                const url = modelUrl.value.trim();
+                if (url) {
+                    loadModel(url);
+                }
+            });
+            
+            resetButton.addEventListener('click', () => {
+                camera.position.set(0, 0, 5);
+                camera.lookAt(0, 0, 0);
+            });
+            
+            rotationSlider.addEventListener('input', (e) => {
+                rotationSpeed = parseFloat(e.target.value);
+            });
+            
+            lightSlider.addEventListener('input', (e) => {
+                const intensity = parseFloat(e.target.value);
+                directionalLight.intensity = intensity;
+            });
+            
+            sampleModels.forEach(sampleModel => {
+                sampleModel.addEventListener('click', () => {
+                    const url = sampleModel.dataset.url;
+                    modelUrl.value = url;
+                    loadModel(url);
+                });
+            });
+            
+            // Handle Enter key in URL input
+            modelUrl.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    loadButton.click();
+                }
+            });
+        }
+        
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            const delta = clock.getDelta();
+            
+            // Update animations
+            if (mixer) {
+                mixer.update(delta);
+            }
+            
+            // Auto rotation
+            if (model && rotationSpeed > 0) {
+                model.rotation.y += rotationSpeed;
+            }
+            
+            renderer.render(scene, camera);
+        }
+        
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+        
+        // Initialize everything
+        init();
+    </script>
+</body>
+</html>
