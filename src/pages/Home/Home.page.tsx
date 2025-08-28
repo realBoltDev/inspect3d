@@ -1,13 +1,15 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { useWeaponStore } from '@/store/weaponStore';
 
 export function HomePage() {
-  const { weapon, skin, wireframe, rotation } = useWeaponStore();
+  const { weapon, skin, wireframe, rotation, rotation_speed } = useWeaponStore();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rotationRef = useRef(rotation);
+  const rotationSpeedRef = useRef(rotation_speed);
+  const [loading, setLoading] = useState<boolean>(false);
 
   const sceneRef = useRef<{
     scene: THREE.Scene;
@@ -21,7 +23,8 @@ export function HomePage() {
   // keep rotationRef in sync with store
   useEffect(() => {
     rotationRef.current = rotation;
-  }, [rotation]);
+    rotationSpeedRef.current = rotation_speed;
+  }, [rotation, rotation_speed]);
 
   // Initialize Three.js scene
   const initScene = useCallback(() => {
@@ -85,18 +88,24 @@ export function HomePage() {
     return { scene, camera, renderer, controls, currentModel: null, animationId: null };
   }, []);
 
+  // Remove current model
+  const removeCurrentModel = useCallback(() => {
+    if (!sceneRef.current?.currentModel) return;
+    
+    const { scene, currentModel } = sceneRef.current;
+    scene.remove(currentModel);
+    sceneRef.current.currentModel = null;
+  }, []);
+
   // Load model
   const loadModel = useCallback(
-    async (weapon: string, skin: string) => {
+    async (weapon: string, skin: string, wireframe: boolean) => {
       if (!sceneRef.current) return;
 
-      const { scene, currentModel } = sceneRef.current;
+      const { scene } = sceneRef.current;
 
       // Remove old model
-      if (currentModel) {
-        scene.remove(currentModel);
-        sceneRef.current.currentModel = null;
-      }
+      removeCurrentModel();
 
       const weaponStr = weapon.replace(' ', '_').toLowerCase();
       const skinStr = skin.replace(' ', '_').toLowerCase();
@@ -104,6 +113,7 @@ export function HomePage() {
       const texturePath = `/assets/skins/${weaponStr}/textures/${skinStr}.png`;
 
       try {
+        setLoading(true);
         const loader = new GLTFLoader();
         const textureLoader = new THREE.TextureLoader();
 
@@ -148,12 +158,15 @@ export function HomePage() {
         scene.add(pivot);
 
         sceneRef.current.currentModel = pivot;
+        setLoading(false);
+
         console.log(`Loaded ${weapon} with ${skin}`);
       } catch (err) {
         console.error(`Error loading model ${weapon} with ${skin}`, err);
+        setLoading(false);
       }
     },
-    [wireframe]
+    [removeCurrentModel]
   );
 
   // Animation
@@ -162,8 +175,8 @@ export function HomePage() {
 
     const { controls, renderer, scene, camera, currentModel } = sceneRef.current;
 
-    if (currentModel && rotationRef.current) {
-      currentModel.rotation.y += 0.01;
+    if (currentModel && rotationRef.current && rotationSpeedRef.current) {
+      currentModel.rotation.y += rotationSpeedRef.current;
     }
 
     controls.update();
@@ -207,14 +220,21 @@ export function HomePage() {
     };
   }, [initScene, animate, handleResize]);
 
-  // Load new model on weapon/skin change
+  // Handle weapon change - remove model when weapon changes but skin is not selected
+  useEffect(() => {
+    if (weapon && !skin && sceneRef.current) {
+      removeCurrentModel();
+    }
+  }, [weapon, skin, removeCurrentModel]);
+
+  // Load new model only when both weapon and skin are selected
   useEffect(() => {
     if (weapon && skin && sceneRef.current) {
-      loadModel(weapon, skin);
+      loadModel(weapon, skin, wireframe);
     }
   }, [weapon, skin, loadModel]);
 
-  // Update wireframe toggle
+  // Update wireframe toggle separately to avoid reloading the model
   useEffect(() => {
     if (!sceneRef.current?.currentModel) return;
     sceneRef.current.currentModel.traverse((child: any) => {
@@ -228,6 +248,22 @@ export function HomePage() {
   return (
     <div style={{ width: '100%', height: '100%' }}>
       <canvas ref={canvasRef} style={{ display: 'block', width: '100%', height: '100%' }} />
+      {loading && (
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: 'rgba(36,36,36,0.8)',
+            color: 'white',
+            fontSize: '2rem',
+          }}
+        >
+          Loading...
+        </div>
+      )}
     </div>
   );
 }
