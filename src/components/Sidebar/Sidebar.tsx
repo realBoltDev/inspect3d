@@ -1,13 +1,13 @@
-import { Stack, Button, Combobox, Input, InputBase, useCombobox, Text } from '@mantine/core';
+import { Stack, Button, Combobox, Input, InputBase, useCombobox, Text, Slider } from '@mantine/core';
 import { useWeaponStore } from '@/store/weaponStore';
-import { useState } from 'react';
+import { useEffect } from 'react';
 
 const weaponsData: Record<string, string[]> = {
-  "AK-47": ["Asiimov", "Neon Revolution"],
-  "M4A4": ["Howl", "Neo-Noir"],
-  "AWP": ["Dragon Lore", "Neo-Noir"],
-  "Desert Eagle": ["Blaze", "Kumicho Dragon", "Golden Koi"],
-  "Butterfly Knife": ["Fade", "Crimson Web", "Doppler"],
+  "AK-47": ["Asiimov", "Neon Revolution", "Phantom Disruptor"],
+  "M4A4": ["The Emperor", "Desolate Space", "Temukau"],
+  "M4A1-S": ["Cyrex", "Player Two", "Decimator"],
+  "AWP": ["Dragon Lore", "Neo-Noir", "Wildfire"],
+  "Desert Eagle": ["Ocean Drive", "Printstream", "Trigger Discipline"]
 };
 
 export function Sidebar() {
@@ -22,8 +22,15 @@ export function Sidebar() {
     weapon, setWeapon,
     skin, setSkin,
     wireframe, toggleWireframe,
-    rotation, toggleRotation
+    rotation, toggleRotation,
+    rotation_speed, setRotationSpeed
   } = useWeaponStore();
+
+  useEffect(() => {
+    if (!weapon) setWeapon("AK-47");
+    if (!skin) setSkin("Asiimov");
+    if (rotation_speed === null) setRotationSpeed(0.01);
+  }, []); // Empty dependency array - only runs on mount
 
   const weaponOptions = Object.keys(weaponsData).map((w) => (
     <Combobox.Option key={w} value={w}>
@@ -46,7 +53,7 @@ export function Sidebar() {
         <Combobox size="md" store={weaponCombobox} withinPortal={false} transitionProps={{ duration: 200, transition: 'pop' }}
           onOptionSubmit={(val) => {
             setWeapon(val);
-            setSkin(null);
+            setSkin(null); // Clear skin when weapon changes
             weaponCombobox.closeDropdown();
           }}
         >
@@ -103,6 +110,11 @@ export function Sidebar() {
         <Button variant="default" color="gray" style={{ width: "fit-content" }}
           onClick={() => toggleRotation()}
         >Toggle</Button>
+      </div>
+
+      <div>
+        <Text fz={24}>Rotation Speed:</Text>
+        <Slider min={0} max={0.1} step={0.0001} defaultValue={0.01} label={null} onChange={setRotationSpeed} />
       </div>
     </Stack>
   );
