@@ -116,6 +116,15 @@ export function Sidebar() {
         <Text fz={24}>Rotation Speed:</Text>
         <Slider min={0} max={0.1} step={0.0001} defaultValue={0.01} label={null} onChange={setRotationSpeed} />
       </div>
+
+      <div>
+        <Text fz={24}>Controls:</Text>
+        <Text fz={20}>
+          • Left Mouse Drag → Orbit<br />
+          • Right Mouse Drag → Pan<br />
+          • Scroll → Zoom
+        </Text>
+      </div>
     </Stack>
   );
 }
