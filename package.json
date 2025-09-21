@@ -21,7 +21,7 @@
   },
   "dependencies": {
     "@mantine/core": "8.1.2",
-    "@mantine/hooks": "8.1.2",
+    "@mantine/hooks": "8.2.7",
     "@mantinex/mantine-logo": "^2.0.0",
     "@tabler/icons-react": "^3.34.0",
     "@types/three": "^0.178.1",
